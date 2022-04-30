@@ -1,5 +1,7 @@
 const path = require("path");
-const nodeExternals = require("webpack-node-externals");
+const LwcWebpackPlugin = require('lwc-webpack-plugin');
+const nodeExternals = require('webpack-node-externals'); 
+
 
 const envName = (env) => {
   if (env.production) {
@@ -20,16 +22,17 @@ const envToMode = (env) => {
 
 module.exports = env => {
   return {
+    
     target: "electron-renderer",
     mode: envToMode(env),
     node: {
       __dirname: false,
       __filename: false
     },
-    externals: [nodeExternals()],
     resolve: {
+      modules:  ['node_modules'],
       alias: {
-        env: path.resolve(__dirname, `../config/env_${envName(env)}.json`)
+        env: path.resolve(__dirname, `../config/env_${envName(env)}.json`),
       }
     },
     devtool: "source-map",
@@ -42,9 +45,37 @@ module.exports = env => {
         },
         {
           test: /\.css$/,
-          use: ["style-loader", "css-loader"]
-        }
+          use: ["style-loader", "css-loader"],
+          exclude: [/node_modules/, /src/]
+      }
       ]
     },
+    plugins: [
+      new LwcWebpackPlugin({
+          modules: [
+              {dir: "src/modules"},
+              { npm: 'lwc-recipes-oss-ui-components' },
+              { npm: 'lightning-base-components' },
+              { npm: '@salesforce-ux/design-system' },
+          ]
+      }
+      ),
+      {
+        apply(compiler) {
+          compiler.options.module.rules.push({
+            test: /\.ts$/,
+            exclude: /node_modules/,
+            use: {
+              loader: 'babel-loader',
+              options: {
+                presets: ['@babel/preset-typescript'],
+                plugins: [['@babel/plugin-syntax-decorators', { legacy: true }]],
+              }
+            }
+          })
+        }
+      }
+  
+    ],
   };
 };
